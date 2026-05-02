@@ -22,13 +22,14 @@ jobs:
       # =========================
       # BACKEND
       # =========================
-      - name: Instalar backend
-        working-directory: backend
-        run: npm install
-
       - name: Criar .env
         run: |
           echo "DATABASE_URL=file:./dev.db" >> backend/.env
+          echo "PORT=3001" >> backend/.env
+
+      - name: Instalar backend
+        working-directory: backend
+        run: npm install
 
       - name: Gerar Prisma Client
         working-directory: backend
@@ -40,7 +41,7 @@ jobs:
 
       - name: Subir backend
         working-directory: backend
-        run: npm run dev &
+        run: nohup npm run dev &
       
       - name: Esperar backend subir
         run: npx wait-on http://localhost:3001 --timeout 60000
