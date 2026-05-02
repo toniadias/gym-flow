@@ -1,0 +1,665 @@
+openapi: 3.0.0
+info:
+  title: GymFlow API - Performance Insight
+  version: 1.1.0
+  description: API para gestão de equipamentos, treinos e análise de PSE/PSR com suporte a progressão de carga.
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+  # --- MODELOS DE IDENTIDADE ---
+    Usuario:
+      type: object
+      required:
+        - nome
+        - email
+        - senha
+        - role
+      properties:
+        id:
+          type: string
+        nome:
+          type: string
+          example: Tonia Dias
+        email:
+          type: string
+          example: aluna@gym.com
+        senha:
+          type: string
+          example: '123'
+        role:
+          type: string
+          enum: [ALUNO, PROFESSOR]
+
+# --- MODELOS DE EQUIPAMENTO ---
+    Equipamento:
+      type: object
+      required:
+        - nome
+        - url
+      properties:
+        id:
+          type: string
+          description: ID único do equipamento
+        nome:
+          type: string
+          example: "Leg Press 45"
+        musculoAlvo:
+          type: string
+          example: "Quadríceps"
+        url:
+          type: string
+          example: "https://gymflow.com/assets/legpress.png"
+   
+    # --- MODELOS DE TREINO E IA ---
+    TreinoEquipamento:
+      type: object
+      properties:
+        equipamentoId:
+          type: string
+        cargaPlanejada:
+          type: integer
+          description: "Carga em kg para esta máquina específica"
+          example: 50
+        cargaSugerida:
+          type: integer
+          description: "Calculado pela IA após feedback"
+          example: 55
+        pesoRealizado:
+          type: integer
+          description: "Peso realmente usado no dia"
+          example: 45
+        series:
+          type: integer
+          default: 3
+        repeticoes:
+          type: integer
+          default: 10
+        equipamento:
+          $ref: '#/components/schemas/Equipamento'
+    
+    Treino:
+      type: object
+      properties:
+        id:
+          type: string
+        usuarioId:
+          type: string
+          description: ID do usuário vinculado ao treino
+        exercise:
+          type: string
+          example: "Treino A - Peito e Tríceps"
+        prescribed_intensity:
+          type: string
+          example: "Moderada"
+        status:
+          type: string
+          enum: [PENDENTE, EM_ANDAMENTO, CONCLUIDO]
+        dataInicio:
+          type: string
+        duracaoMinutos:
+          type: integer
+        pse:
+          $ref: '#/components/schemas/EscalaPSE'
+          description: Esforço real relatado pelo usuário
+        statusPSE:
+          type: string
+          example: Muito leve
+        notaRecuperacao24h:
+          $ref: '#/components/schemas/EscalaPSR'
+          description: Percepção de recuperação registrada no feedback de 24
+        status24h:
+          type: string
+          example: Pronto pra próxima
+        concluido:
+          type: boolean
+        equipamentos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TreinoEquipamento'
+
+    EscalaPSE:
+      type: integer
+      description: >
+        Percepção Subjetiva de Esforço (Esforço do treino):
+        0: Muito leve
+        5: Moderado
+        7: Forte
+        10: Muito forte
+      enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      example: 7
+
+    EscalaPSR:
+      type: integer
+      description: >
+        Percepção Subjetiva de Recuperação (Estado pós-24h):
+        0: Muito cansado
+        5: Recuperado
+        10: Pronto pra próxima
+      enum: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+      example: 10
+    
+    # --- MODELOS DE RESPOSTA ---
+    Error:
+      type: object
+      properties:
+        error: { type: string, example: "Mensagem de erro detalhada" }
+
+security:
+  - bearerAuth: []
+
+paths:
+  /login:
+    post:
+      summary: "Autenticação de usuários"
+      tags:
+        - "Autenticação"
+      security: [] # Rota pública, não exige token para logar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, senha]
+              properties:
+                email:
+                  type: string
+                  example: "aluna@gym.com"
+                senha:
+                  type: string
+                  example: "123"
+      responses:
+        '200':
+          description: "Login realizado com sucesso e retorna o Token"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR..."
+        '401':
+          description: Credenciais inválidas.
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  /usuarios:
+    get:
+      summary: Lista todos os usuários
+      tags:
+        - Gestão de Usuários
+      responses:
+        '200':
+          description: Lista de usuários retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Usuario'
+    post:
+      summary: Cadastra um novo usuário
+      tags:
+        - Gestão de Usuários
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Usuario'
+      responses:
+        '201':
+          description: "Usuário criado com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '400':
+          description: "Dados inválidos (ex: e-mail já cadastrado)"
+
+  /usuarios/{id}:
+    put:
+      summary: "Atualiza dados de um usuário"
+      description: "Permite alterar informações do perfil do usuário pelo ID."
+      tags:
+        - "Gestão de Usuários"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "ID único do usuário"
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Usuario'
+      responses:
+        '200':
+          description: "Usuário atualizado com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Usuario'
+        '404':
+          description: "Usuário não encontrado"
+    delete:
+      summary: "Remove um usuário do sistema"
+      description: "Exclui permanentemente um usuário da base de dados através do seu ID."
+      tags:
+        - "Gestão de Usuários"
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: "ID do usuário a ser removido"
+          schema:
+            type: string
+      responses:
+        '204':
+          description: "Usuário removido com sucesso (sem conteúdo de retorno)"
+        '404':
+          description: "Usuário não encontrado"
+  
+  /equipamentos:
+    get:
+      summary: Lista todos os equipamentos
+      tags:
+      - Gestão de Equipamentos
+      responses:
+        '200':
+          description: Lista de equipamentos retornada com sucesso
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Equipamento'
+    post:
+      summary: Cria um novo equipamento
+      tags:
+        - Gestão de Equipamentos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Equipamento'
+      responses:
+        '201':
+          description: "Equipamento criado com sucesso"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Equipamento'
+        '400':
+          description: "Erro na requisição (dados inválidos)"
+  
+  /treinos:
+    get:
+      summary: "Busca o histórico de treinos do aluno"
+      description: "Retorna os últimos 7 treinos realizados ou pendentes, incluindo dados de equipamentos."
+      tags:
+        - "Treinos"
+      parameters:
+        - name: usuarioId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Lista de treinos retornada com sucesso"
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Treino' } }
+    post:
+      summary: Cria ou Replica um grupo de treino
+      description: >
+        Permite criar um novo treino do zero ou replicar o último treino realizado pelo aluno usando acao="MANTER".
+      tags:
+        - Treinos
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [usuarioId, acao]
+              properties:
+                usuarioId:
+                  type: string
+                  example: "uuid-do-aluno-123"
+                exercise:
+                  type: string
+                  example: "Treino A"
+                prescribed_intensity:
+                  type: string
+                  example: "Moderada"
+                acao:
+                  type: string
+                  enum: [CRIAR, MANTER]
+                  example: "CRIAR"
+                  description: Se MANTER, o sistema replica o último treino. Se CRIAR (ou AJUSTAR), usa os dados abaixo.
+                equipamentosSelecionados:
+                  type: array
+                  description: Lista de equipamentos e suas respectivas cargas planejadas.
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: ID do equipamento (máquina).
+                      carga:
+                        type: number
+                        description: Peso em kg definido para este equipamento.
+                  example:
+                    - id: "uuid-maquina-1"
+                      carga: 50
+                    - id: "uuid-maquina-2"
+                      carga: 35
+      responses:
+        '201':
+          description: Treino processado e cargas armazenadas na tabela TreinoEquipamento.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Treino'
+        '404':
+          description: Usuário não encontrado ou sem histórico para replicar.
+
+  /treinos/{id}/iniciar:
+    patch:
+      summary: Inicia um treino específico
+      tags:
+        - Gestão de Treinos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do treino que será iniciado
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Treino iniciado com sucesso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Treino'
+        '404':
+          description: Treino não localizado
+          content:
+            application/json:
+              example:
+                error: "Treino não localizado"
+
+  /feedbacks/finalizar:
+    post:
+      summary: Finaliza o treino e calcula a Carga Interna
+      description: Encerra a sessão de treino, calcula a duração total e gera o índice de Carga Interna (PSE x Duração).
+      tags:
+        - Feedbacks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [treinoId, pse]
+              properties:
+                treinoId:
+                  type: string
+                  example: "uuid-do-treino-123"
+                pse:
+                  $ref: '#/components/schemas/EscalaPSE'
+                statusPSE:
+                  type: string
+                  description: Classificação textual do esforço (ex. Forte, Moderado)
+                  example: "Forte"
+                detalhesEquipamentos: 
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      equipamentoId:
+                        type: string
+                      pesoRealizado:
+                        type: integer
+                      repeticoes:
+                        type: integer
+                      series:
+                        type: integer
+      responses:
+        '200':
+          description: Treino finalizado e métricas de performance calculadas com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: ID do treino finalizado.
+                  status:
+                    type: string
+                    example: "CONCLUIDO"
+                  duracaoMinutos:
+                    type: integer
+                    description: Tempo total do treino calculado pelo backend.
+                    example: 45
+                  concluido:
+                    type: boolean
+                    example: true
+        '404':
+          description: Treino não encontrado.
+        '500':
+          description: Erro ao processar métricas de performance no servidor.
+
+  /feedbacks/{id}:
+    patch:
+      summary: Registra o feedback final de 24h e encerra o treino
+      tags:
+        - Gestão de Treinos
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: ID do treino para feedback de 24h
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+                - notaRecuperacao
+              properties:
+                status:
+                  type: string
+                  description: Percepção de recuperação/dor após 24h
+                  example: "RECUPERADO"
+                notaRecuperacao:
+                  type: integer
+                  description: Nota de 1 a 10 para o estado físico
+                  example: 9
+      responses:
+        '200':
+          description: Feedback de 24h registrado e treino concluído
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Treino'
+        '404':
+          description: Treino não encontrado
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Erro ao atualizar feedback de 24h"
+
+  /sugerir-carga/{alunoId}:
+    get:
+      summary: "Sugestão inteligente com ajuste percentual"
+      description: "Calcula a progressão de carga baseada na relação PSE/PSR do último treino concluído, analisando cada equipamento do treino e sugerindo progressão de carga."
+      tags:
+        - "Performance"
+      parameters:
+        - name: alunoId
+          in: path
+          required: true
+          description: "ID do aluno para o cálculo de IA"
+          schema:
+            type: string
+
+      responses:
+        '200':
+          description: "Sugestão calculada com sucesso"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  alunoId:
+                    type: string
+                    description: "ID do aluno analisado"
+                    example: "uuid-do-aluno-123"
+
+                  dataAnalise:
+                    type: string
+                    format: date-time
+                    description: "Data do último treino utilizado como base para análise"
+                    example: "2026-04-28T10:30:00.000Z"
+
+                  pseInformada:
+                    type: integer
+                    description: "Última nota de esforço percebido (PSE)"
+                    example: 7
+
+                  psrInformada:
+                    type: integer
+                    description: "Última nota de recuperação percebida (PSR)"
+                    example: 8
+
+                  recomendacao:
+                    type: string
+                    description: "Recomendação geral baseada na análise PSE + PSR"
+                    example: "Aumentar carga para progressão"
+
+                  detalhes:
+                    type: array
+                    description: "Lista detalhada de sugestão por equipamento"
+                    items:
+                      type: object
+                      properties:
+                        equipamentoId:
+                          type: string
+                          description: "ID do equipamento"
+                          example: "uuid-maquina-001"
+
+                        nome:
+                          type: string
+                          description: "Nome do equipamento"
+                          example: "Leg Press 45"
+
+                        musculo:
+                          type: string
+                          description: "Grupo muscular principal"
+                          example: "Quadríceps"
+
+                        cargaAnterior:
+                          type: integer
+                          description: "Carga utilizada anteriormente"
+                          example: 100
+
+                        cargaNova:
+                          type: integer
+                          description: "Nova carga sugerida pela IA"
+                          example: 115
+
+                        ajusteTexto:
+                          type: string
+                          description: "Percentual visual do ajuste sugerido"
+                          example: "+15%"
+
+        '404':
+          description: "Sem histórico para análise"
+
+        '500':
+          description: "Erro interno ao processar sugestão"
+
+  /relatorios/performance:
+    get:
+      summary: "Dados para o Dashboard Performance Insight"
+      description: "Retorna métricas consolidadas de prontidão, fadiga, variabilidade semanal e histórico detalhado para o dashboard."
+      tags:
+        - "Relatórios"
+      parameters:
+        - name: usuarioId
+          in: query
+          required: true
+          description: "ID do aluno para filtrar os dados de performance"
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Dados de performance retornados com sucesso"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  prontidao:
+                    type: integer
+                    example: 8
+                  divergenciaCarga:
+                    type: string
+                    example: "+10%"
+                  statusGeral:
+                    type: string
+                    example: "Recuperado"
+                  psr:
+                    type: integer
+                    description: "Última nota de recuperação (PSR) registrada"
+                    example: 9
+                  fadiga:
+                    type: integer
+                    description: "Nível de fadiga baseado na última PSE"
+                    example: 4
+                  cicloCompleto:
+                    type: boolean
+                    description: "Indica se o aluno completou o ciclo de 7 dias de treino"
+                    example: true
+                  variabilidadeSemanal:
+                    type: array
+                    description: "Carga interna dos últimos 7 dias"
+                    items:
+                      type: integer
+                    example: [300, 0, 450, 200, 0, 500, 150]
+                  historicoDetalhado:
+                    type: array
+                    description: "Lista detalhada das métricas diárias dos últimos 7 dias"
+                    items:
+                      type: object
+                      nullable: true
+                      properties:
+                        pse: { type: integer }
+                        psr: { type: integer }
+                        divergenciaCarga: { type: string }
+                        statusGeral: { type: string }
+                        horasDor: { type: integer }
+                        cicloCompleto: { type: boolean }
+        '404':
+          description: "Usuário não encontrado ou sem histórico."
+        '500':
+          description: "Erro interno ao processar métricas."

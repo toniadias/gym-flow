@@ -1,0 +1,59 @@
+name: E2E Tests (Playwright)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositório
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # =========================
+      # BACKEND
+      # =========================
+      - name: Instalar backend
+        working-directory: backend
+        run: npm install
+
+      - name: Subir backend
+        working-directory: backend
+        run: npm run dev &
+      
+      - name: Esperar backend subir
+        run: npx wait-on http://localhost:3001
+
+      # =========================
+      # TESTS
+      # =========================
+      - name: Instalar testes
+        working-directory: tests
+        run: npm install
+
+      - name: Instalar browsers Playwright
+        working-directory: tests
+        run: npx playwright install --with-deps
+
+      - name: Rodar testes
+        working-directory: tests
+        run: npx playwright test
+
+      # =========================
+      # RELATÓRIO
+      # =========================
+      - name: Upload relatório
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: tests/playwright-report/

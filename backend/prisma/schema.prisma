@@ -1,0 +1,89 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  ALUNO
+  PROFESSOR
+}
+
+model Usuario {
+  id      String   @id @default(uuid())
+  nome    String
+  email   String   @unique
+  senha   String
+  role    Role // "ALUNO" ou "PROFESSOR"
+  treinos Treino[]
+  cargas  CargaUsuario[]
+}
+
+model Equipamento {
+  id          String   @id @default(uuid())
+  nome        String
+  musculoAlvo String?
+  url         String
+  treinos      TreinoEquipamento[]
+  cargasUsuarios CargaUsuario[]
+}
+
+model TreinoEquipamento {
+  id             String      @id @default(uuid())
+  treinoId       String
+  equipamentoId  String
+  treino         Treino      @relation(fields: [treinoId], references: [id])
+  equipamento    Equipamento @relation(fields: [equipamentoId], references: [id])
+
+  cargaPlanejada Int         
+  cargaSugerida  Int?  
+
+  series         Int         @default(3)  // Ex: 3 séries
+  repeticoes     Int         @default(10) // Ex: 10 repetições
+  pesoRealizado  Int?                     // O que você realmente usou no dia    
+  
+  @@unique([treinoId, equipamentoId])
+}
+
+model CargaUsuario {
+  id             String      @id @default(uuid())
+  usuarioId      String
+  equipamentoId  String
+  pesoAtual      Int         
+  
+  usuario        Usuario     @relation(fields: [usuarioId], references: [id])
+  equipamento    Equipamento @relation(fields: [equipamentoId], references: [id])
+
+  @@unique([usuarioId, equipamentoId]) // Garante um registro único por par Aluno/Máquina
+}
+
+model Treino {
+  id                   String  @id @default(uuid())
+  usuarioId            String
+  usuario              Usuario @relation(fields: [usuarioId], references: [id])
+  exercise             String
+  prescribed_intensity String
+
+  equipamentos TreinoEquipamento[]
+
+  // --- STATUS E CONTROLE ---
+  // Status possíveis: "PENDENTE", "EM_ANDAMENTO", "CONCLUIDO"
+  status         String    @default("PENDENTE")
+  dataInicio     DateTime? // Timestamp do clique no botão "Iniciar"
+  dataFeedback       DateTime?
+  duracaoMinutos Int? // Diferença entre dataInicio e dataFeedback
+
+  // --- MÉTRICAS CORE (IA) ---
+  statusPSE          String?
+  pse                Int?
+  status24h          String?
+  notaRecuperacao24h Int?
+
+  createdAt DateTime @default(now())
+  concluido Boolean  @default(false)
+}
+
+

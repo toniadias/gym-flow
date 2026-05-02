@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "test:e2e": "cd tests && npx playwright test"
+  }
+}

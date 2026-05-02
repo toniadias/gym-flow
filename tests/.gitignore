@@ -1,0 +1,9 @@
+# Node
+node_modules/
+# Env
+.env
+
+# Playwright
+/test-results/
+/playwright-report/
+
