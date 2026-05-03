@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # =========================
+      # SETUP
+      # =========================
       - name: Clonar repositório
         uses: actions/checkout@v4
 
@@ -20,7 +23,7 @@ jobs:
           node-version: 20
 
       # =========================
-      # BACKEND
+      # BACKEND SETUP
       # =========================
       - name: Criar .env
         run: |
@@ -39,10 +42,13 @@ jobs:
         working-directory: backend
         run: npx prisma migrate deploy
 
+      # =========================
+      # SUBIR BACKEND
+      # =========================
       - name: Subir backend
         working-directory: backend
         run: |
-          npm run dev > backend.log 2>&1 &
+          npm run start > backend.log 2>&1 &
           sleep 10
 
       - name: Verificar backend (debug)
@@ -55,7 +61,7 @@ jobs:
         run: npx wait-on http://localhost:3001 --timeout 60000
 
       # =========================
-      # TESTS
+      # TESTES
       # =========================
       - name: Instalar testes
         working-directory: tests
