@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -8,7 +10,9 @@ const jwt = require('jsonwebtoken');
 const app = express();
 const prisma = new PrismaClient();
 const SECRET = 'gymflow_secret';
-const swaggerDocument = YAML.load('./swagger.yaml');
+const path = require('path');
+
+const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 
 app.use(cors());
 app.use(express.json());
@@ -545,7 +549,9 @@ app.get('/sugerir-carga/:alunoId', adminMiddleware, async (req, res) => {
 });
 // ---
 
-app.listen(3001, () => {
-  console.log('GymFlow API rodando em http://localhost:3001');
-  console.log('Swagger: http://localhost:3001/api-docs');
+const PORT = process.env.PORT || 3001;
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`GymFlow API rodando em http://localhost:${PORT}`);
+  console.log(`Swagger: http://localhost:${PORT}/api-docs`);
 });
