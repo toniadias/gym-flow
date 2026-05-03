@@ -1,4 +1,4 @@
-name: E2E Tests (Playwright)
+name: API Tests (Playwright)
 
 on:
   push:
@@ -58,7 +58,7 @@ jobs:
         run: npx wait-on http://127.0.0.1:3001/health --timeout 60000
 
       # =========================
-      # TESTES E2E (PLAYWRIGHT)
+      # TESTES API (PLAYWRIGHT)
       # =========================
       - name: Instalar dependências (Tests)
         working-directory: tests
