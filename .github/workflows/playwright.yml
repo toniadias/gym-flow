@@ -76,6 +76,8 @@ jobs:
       - name: Rodar testes
         working-directory: tests
         run: npx playwright test
+        env:
+          BASE_URL: http://127.0.0.1:3001
 
       # =========================
       # RELATÓRIO
