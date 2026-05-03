@@ -1,4 +1,4 @@
-import 'dotenv/config';
+require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
@@ -6,12 +6,11 @@ const { PrismaClient } = require('@prisma/client');
 const swaggerUi = require('swagger-ui-express');
 const YAML = require('yamljs');
 const jwt = require('jsonwebtoken');
+const path = require('path');
 
 const app = express();
 const prisma = new PrismaClient();
 const SECRET = 'gymflow_secret';
-const path = require('path');
-
 const swaggerDocument = YAML.load(path.join(__dirname, 'swagger.yaml'));
 
 app.use(cors());
