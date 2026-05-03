@@ -49,16 +49,19 @@ jobs:
         working-directory: backend
         run: |
           npm run start 2>&1 | tee backend.log &
-          sleep 10
+          sleep 3
 
       - name: Verificar backend (debug)
         run: cat backend/backend.log
 
-      - name: Testar porta diretamente
-        run: curl -v http://localhost:3001
-
+      # =========================
+      # WAIT BACKEND
+      # =========================
       - name: Esperar backend subir
-        run: npx wait-on http://localhost:3001 --timeout 60000
+        run: npx wait-on http://localhost:3001 --timeout 60000 --interval 1000
+
+      - name: Testar porta diretamente (debug)
+        run: curl -v http://localhost:3001
 
       # =========================
       # TESTES
