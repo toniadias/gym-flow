@@ -12,7 +12,7 @@ jobs:
 
     steps:
       # =========================
-      # SETUP
+      # SETUP DO AMBIENTE
       # =========================
       - name: Clonar repositório
         uses: actions/checkout@v4
@@ -23,14 +23,14 @@ jobs:
           node-version: 20
 
       # =========================
-      # BACKEND SETUP
+      # PREPARAÇÃO DO BACKEND
       # =========================
-      - name: Criar .env
+      - name: Criar .env do Backend
         run: |
           echo "DATABASE_URL=file:./dev.db" > backend/.env
           echo "PORT=3001" >> backend/.env
 
-      - name: Instalar backend
+      - name: Instalar dependências (Backend)
         working-directory: backend
         run: npm install
 
@@ -39,69 +39,48 @@ jobs:
         run: npx prisma generate
 
       # =========================
-      # RESET BANCO 
+      # BANCO DE DADOS (RESET + SEED)
       # =========================
-      - name: Resetar banco SQLite
+      # Este comando apaga o banco, recria as tabelas e roda o seed.js automaticamente
+      - name: Resetar e Popular Banco de Dados
         working-directory: backend
         run: npx prisma migrate reset --force
 
       # =========================
-      # MIGRATIONS
+      # EXECUÇÃO DO SERVIDOR
       # =========================
-      - name: Rodar migrations
-        working-directory: backend
-        run: npx prisma migrate deploy
-
-      # =========================
-      # SEED 
-      # =========================
-      - name: Rodar seed
-        working-directory: backend
-        run: node prisma/seed.js
-
-      # =========================
-      # SUBIR BACKEND
-      # =========================
-      - name: Subir backend
+      - name: Subir backend em background
         working-directory: backend
         run: |
           nohup npm run start > backend.log 2>&1 &
 
-      - name: Verificar backend (debug)
-        run: cat backend/backend.log
+      - name: Esperar backend ficar saudável
+        run: npx wait-on http://127.0.0.1:3001/health --timeout 60000
 
       # =========================
-      # WAIT BACKEND
+      # TESTES E2E (PLAYWRIGHT)
       # =========================
-      - name: Esperar backend subir
-        run: npx wait-on http://127.0.0.1:3001/health --timeout 60000 --interval 1000
-
-      - name: Testar health
-        run: curl -v http://127.0.0.1:3001/health
-
-      # =========================
-      # TESTES
-      # =========================
-      - name: Instalar testes
+      - name: Instalar dependências (Tests)
         working-directory: tests
         run: npm install
 
-      - name: Instalar browsers Playwright
+      - name: Instalar browsers do Playwright
         working-directory: tests
         run: npx playwright install --with-deps
 
-      - name: Rodar testes
+      - name: Executar testes Playwright
         working-directory: tests
         run: npx playwright test
         env:
           BASE_URL: http://127.0.0.1:3001
 
       # =========================
-      # RELATÓRIO
+      # RELATÓRIOS
       # =========================
-      - name: Upload relatório
+      - name: Upload do relatório de testes
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: tests/playwright-report/
+          retention-days: 30

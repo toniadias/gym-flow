@@ -10,7 +10,7 @@ test.describe('Equipamentos', () => {
     const response = await request.post('/equipamentos', {
       headers: { Authorization: token },
       data: {
-        nome: 'Leg Press',
+        nome: `Leg Press ${Date.now()}`,
         musculoAlvo: 'Perna',
         url: 'https://exemplo.com/leg.png',
       },
@@ -27,7 +27,7 @@ test.describe('Equipamentos', () => {
     const response = await request.post('/equipamentos', {
       headers: { Authorization: token },
       data: {
-        nome: 'Cadeira extensora',
+        nome: `Cadeira extensora ${Date.now()}`,
         musculoAlvo: 'Quadríceps',
         url: 'https://exemplo.com/extensora.png',
       },

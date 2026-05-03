@@ -24,7 +24,7 @@ model Usuario {
 
 model Equipamento {
   id          String   @id @default(uuid())
-  nome        String
+  nome        String   @unique
   musculoAlvo String?
   url         String
   treinos      TreinoEquipamento[]
