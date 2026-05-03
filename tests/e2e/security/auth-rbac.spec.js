@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import { createAPI } from '../../utils/request.helper';
 import { getToken, loginAs } from '../../utils/auth.helper';
 
 test.describe('Autenticação e RBAC', () => {

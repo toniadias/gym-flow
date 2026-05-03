@@ -89,7 +89,7 @@ async function getTreinoId(request, token) {
   return treino?.id;
 }
 
-module.exports = {
+export {
   getUserIdByRole,
   getAlunoComTreino,
   getEquipamentosParaTreino,

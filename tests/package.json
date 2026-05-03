@@ -16,5 +16,6 @@
   "dependencies": {
     "dotenv": "^17.4.2",
     "wait-on": "^9.0.5"
-  }
+  },
+  "type": "module"
 }

@@ -4,8 +4,7 @@ test.describe('Login', () => {
   test('POST /login - Deve autenticar usuário com credenciais válidas', async ({
     request,
   }) => {
-    console.log('BASE_URL:', process.env.BASE_URL);
-    const response = await request.post(process.env.BASE_URL + '/login', {
+    const response = await request.post('/login', {
       data: { email: 'aluna@gym.com', senha: '123' },
     });
 
@@ -20,7 +19,7 @@ test.describe('Login', () => {
   test('POST /login - Deve retornar erro para senha inválida', async ({
     request,
   }) => {
-    const response = await request.post(process.env.BASE_URL + '/login', {
+    const response = await request.post('/login', {
       data: { email: 'aluna@gym.com', senha: 'errada' },
     });
     expect(response.status()).toBe(401);
@@ -31,7 +30,7 @@ test.describe('Login', () => {
   test('POST /login - Deve retornar erro para usuário inexistente', async ({
     request,
   }) => {
-    const response = await request.post(process.env.BASE_URL + '/login', {
+    const response = await request.post('/login', {
       data: { email: 'nao-existe@gym.com', senha: '123' },
     });
     expect(response.status()).toBe(401);
