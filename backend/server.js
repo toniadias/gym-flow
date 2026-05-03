@@ -548,6 +548,10 @@ app.get('/sugerir-carga/:alunoId', adminMiddleware, async (req, res) => {
 });
 // ---
 
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
 const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, '0.0.0.0', () => {
