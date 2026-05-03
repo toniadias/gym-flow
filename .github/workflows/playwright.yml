@@ -48,7 +48,7 @@ jobs:
       - name: Subir backend
         working-directory: backend
         run: |
-          npm run start > backend.log 2>&1 &
+          npm run start 2>&1 | tee backend.log &
           sleep 10
 
       - name: Verificar backend (debug)
